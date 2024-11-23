@@ -1,5 +1,5 @@
 /**
- * Compilation: gcc emu-miner.c -lssl -lcrypto
+ * Compilation: gcc fayksic.c -lssl -lcrypto
  */
 
 #include <stdio.h>
