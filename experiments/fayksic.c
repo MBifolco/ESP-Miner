@@ -9,11 +9,14 @@
 
 // Define a function for SHA-256 hashing
 void sha256(unsigned char *input, size_t len, unsigned char output[SHA256_DIGEST_LENGTH]) {
-    // TODO: SHA256_* methods are deprecated...
+#if OPENSSL_VERSION_NUMBER < 3
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
     SHA256_Update(&ctx, input, len);
     SHA256_Final(output, &ctx);
+#else
+    SHA256(input, len, output);
+#endif
 }
 
 // Convert a byte array to a hex string for readability (optional)
