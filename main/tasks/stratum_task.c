@@ -1,6 +1,6 @@
 #include "esp_log.h"
 // #include "addr_from_stdin.h"
-#include "bm1397.h"
+#include "fayksic.h"
 #include "connect.h"
 #include "system.h"
 #include "global_state.h"
@@ -35,8 +35,11 @@ static const char * primary_stratum_url;
 static uint16_t primary_stratum_port;
 
 bool is_wifi_connected() {
-    wifi_ap_record_t ap_info;
-    if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+    wifi_mode_t mode;
+    esp_err_t ret = esp_wifi_get_mode(&mode);
+    printf("WiFi mode: %d\n", mode);
+    if (ret == ESP_OK) {
+        
         return true;
     } else {
         return false;
@@ -143,10 +146,10 @@ void stratum_task(void * pvParameters)
 {
     GlobalState * GLOBAL_STATE = (GlobalState *) pvParameters;
 
-    primary_stratum_url = GLOBAL_STATE->SYSTEM_MODULE.pool_url;
-    primary_stratum_port = GLOBAL_STATE->SYSTEM_MODULE.pool_port;
-    char * stratum_url = GLOBAL_STATE->SYSTEM_MODULE.pool_url;
-    uint16_t port = GLOBAL_STATE->SYSTEM_MODULE.pool_port;
+    primary_stratum_url = CONFIG_STRATUM_URL;
+    primary_stratum_port = CONFIG_STRATUM_PORT;
+    char * stratum_url = CONFIG_FALLBACK_STRATUM_URL;
+    uint16_t port = CONFIG_FALLBACK_STRATUM_PORT;
 
     STRATUM_V1_initialize_buffer();
     char host_ip[20];
@@ -169,7 +172,7 @@ void stratum_task(void * pvParameters)
             continue;
         }
 
-        if (retry_attempts >= MAX_RETRY_ATTEMPTS)
+        if (retry_attempts >= 10)
         {
             if (GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_url == NULL || GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_url[0] == '\0') {
                 ESP_LOGI(TAG, "Unable to switch to fallback. No url configured. (retries: %d)...", retry_attempts);
@@ -183,11 +186,12 @@ void stratum_task(void * pvParameters)
             retry_attempts = 0;
         }
 
-        stratum_url = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_url : GLOBAL_STATE->SYSTEM_MODULE.pool_url;
-        port = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? GLOBAL_STATE->SYSTEM_MODULE.fallback_pool_port : GLOBAL_STATE->SYSTEM_MODULE.pool_port;
+        stratum_url = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? CONFIG_STRATUM_PORT : CONFIG_STRATUM_URL;
+        port = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? CONFIG_FALLBACK_STRATUM_URL : CONFIG_FALLBACK_STRATUM_PORT;
 
         struct hostent *dns_addr = gethostbyname(stratum_url);
         if (dns_addr == NULL) {
+            ESP_LOGI(TAG, "Failed to get IP for URL: %s", stratum_url);
             retry_attempts++;
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
@@ -233,6 +237,7 @@ void stratum_task(void * pvParameters)
         }
 
         STRATUM_V1_reset_uid();
+        // turning off for now cause I think its dependent on asic setup
         cleanQueue(GLOBAL_STATE);
 
         ///// Start Stratum Action
@@ -242,14 +247,9 @@ void stratum_task(void * pvParameters)
         // mining.subscribe - ID: 2
         STRATUM_V1_subscribe(GLOBAL_STATE->sock, GLOBAL_STATE->asic_model_str);
 
-        char * username = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? nvs_config_get_string(NVS_CONFIG_FALLBACK_STRATUM_USER, FALLBACK_STRATUM_USER) : nvs_config_get_string(NVS_CONFIG_STRATUM_USER, STRATUM_USER);
-        char * password = GLOBAL_STATE->SYSTEM_MODULE.is_using_fallback ? nvs_config_get_string(NVS_CONFIG_FALLBACK_STRATUM_PASS, FALLBACK_STRATUM_PW) : nvs_config_get_string(NVS_CONFIG_STRATUM_PASS, STRATUM_PW);
-
         //mining.authorize - ID: 3
-        STRATUM_V1_authenticate(GLOBAL_STATE->sock, username, password);
-        free(password);
-        free(username);
-
+        STRATUM_V1_authenticate(GLOBAL_STATE->sock, STRATUM_USER, STRATUM_PW);
+   
         //mining.suggest_difficulty - ID: 4
         STRATUM_V1_suggest_difficulty(GLOBAL_STATE->sock, STRATUM_DIFFICULTY);
 
