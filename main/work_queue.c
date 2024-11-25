@@ -14,7 +14,7 @@ void queue_init(work_queue *queue)
 void queue_enqueue(work_queue *queue, void *new_work)
 {
     pthread_mutex_lock(&queue->lock);
-
+    ESP_LOGI("queue_enqueue", "queue->count: %d", queue->count);
     while (queue->count == QUEUE_SIZE)
     {
         pthread_cond_wait(&queue->not_full, &queue->lock);
