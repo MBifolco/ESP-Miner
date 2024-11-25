@@ -1,10 +1,10 @@
 #include "system.h"
 #include "work_queue.h"
 #include "serial.h"
-#include "bm1397.h"
+#include "fayksic.h"
 #include <string.h>
 #include "esp_log.h"
-
+#include "fayksic.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -42,11 +42,12 @@ void ASIC_task(void *pvParameters)
             GLOBAL_STATE->stratum_difficulty = next_bm_job->pool_diff;
         }
 
-        (*GLOBAL_STATE->ASIC_functions.send_work_fn)(GLOBAL_STATE, next_bm_job); // send the job to the ASIC
-
+        FAYKSIC_send_work(GLOBAL_STATE, next_bm_job); // send the job to the ASIC
+        // log how many jobs are in queue
+        //ESP_LOGI(TAG, "Jobs in queue: %d", GLOBAL_STATE->ASIC_jobs_queue);
         // Time to execute the above code is ~0.3ms
         // Delay for ASIC(s) to finish the job
-        //vTaskDelay((GLOBAL_STATE->asic_job_frequency_ms - 0.3) / portTICK_PERIOD_MS);
+        vTaskDelay((GLOBAL_STATE->asic_job_frequency_ms - 0.3) / portTICK_PERIOD_MS);
         xSemaphoreTake(GLOBAL_STATE->ASIC_TASK_MODULE.semaphore, (GLOBAL_STATE->asic_job_frequency_ms / portTICK_PERIOD_MS));
     }
 }
