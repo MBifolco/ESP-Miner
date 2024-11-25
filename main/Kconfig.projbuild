@@ -1,3 +1,33 @@
+menu "Miner Configuration"
+    choice "DEVICE_TYPE"
+        prompt "Device Type"
+        default DEVICE_TYPE_BITAXE
+        help
+            Select the device type to build for.
+
+        config DEVICE_TYPE_BITAXE
+            bool "Bitaxe"
+            help
+                Use default configs for your device.
+
+        config DEVICE_TYPE_CUSTOM
+            bool "Bitaxe Simulator"
+            help
+                Specify configs for custom device.
+    endchoice
+
+    config AUTO_CONNECT_WIFI
+        bool  "Auto Connect WiFi"
+    
+    config ENABLE_SELF_TEST
+        bool "Enable Self Test"
+        default n
+
+    config ENABLE_POWER_MANAGEMENT
+        bool "Enable Power Management"
+        default n
+
+endmenu
 menu "Bitaxe Configuration"
     config ASIC_VOLTAGE
         int "ASIC Core Voltage (mV)"
@@ -58,15 +88,18 @@ menu "Bitaxe Configuration"
 
     config SELF_TEST
         bool "Self Test"
-        default n
         help
             Run a self test on the device.
     
     config OVERHEAT_MODE
         bool "Overheat Mode"
-        default n
         help
             Enable overheat mode.
+
+    config INVERT_SCREEN
+        bool "Invert Screen"
+        help
+            Invert the screen.
             
 endmenu
 
