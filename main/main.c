@@ -11,15 +11,18 @@
 #include "create_jobs_task.h"
 #include "esp_netif.h"
 #include "system.h"
-#include "http_server.h"
 #include "nvs_config.h"
 #include "serial.h"
 #include "stratum_task.h"
-#include "user_input_task.h"
 #include "i2c_bitaxe.h"
 #include "adc.h"
 #include "nvs_device.h"
-#include "self_test.h"
+#include "driver/uart.h"
+#include "fayksic.h"
+#include "stratum_api.h"
+#include "mining.h"
+
+//#include "self_test.h"
 
 static GlobalState GLOBAL_STATE = {
     .extranonce_str = NULL, 
@@ -29,7 +32,8 @@ static GlobalState GLOBAL_STATE = {
     .ASIC_initalized = false
 };
 
-static const char * TAG = "bitaxe";
+static const char * TAG = "miner";
+
 
 void app_main(void)
 {
@@ -50,82 +54,50 @@ void app_main(void)
         ESP_LOGE(TAG, "Failed to init NVS");
         return;
     }
-
+    
     //parse the NVS config into GLOBAL_STATE
     if (NVSDevice_parse_config(&GLOBAL_STATE) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to parse NVS config");
         return;
     }
-
+     
+   
+    SERIAL_init();
+     
     //should we run the self test?
-    if (should_test(&GLOBAL_STATE)) {
-        self_test((void *) &GLOBAL_STATE);
-        vTaskDelay(60 * 60 * 1000 / portTICK_PERIOD_MS);
-    }
-
+    //if (should_test(&GLOBAL_STATE)) {
+    //    self_test((void *) &GLOBAL_STATE);
+    //    vTaskDelay(60 * 60 * 1000 / portTICK_PERIOD_MS);
+    //}
+   
     SYSTEM_init_system(&GLOBAL_STATE);
-
-    // pull the wifi credentials and hostname out of NVS
-    char * wifi_ssid = nvs_config_get_string(NVS_CONFIG_WIFI_SSID, WIFI_SSID);
-    char * wifi_pass = nvs_config_get_string(NVS_CONFIG_WIFI_PASS, WIFI_PASS);
-    char * hostname  = nvs_config_get_string(NVS_CONFIG_HOSTNAME, HOSTNAME);
-
+    
     // copy the wifi ssid to the global state
-    strncpy(GLOBAL_STATE.SYSTEM_MODULE.ssid, wifi_ssid, sizeof(GLOBAL_STATE.SYSTEM_MODULE.ssid));
+    strncpy(GLOBAL_STATE.SYSTEM_MODULE.ssid, WIFI_SSID, sizeof(GLOBAL_STATE.SYSTEM_MODULE.ssid));
     GLOBAL_STATE.SYSTEM_MODULE.ssid[sizeof(GLOBAL_STATE.SYSTEM_MODULE.ssid)-1] = 0;
 
     // init and connect to wifi
-    wifi_init(wifi_ssid, wifi_pass, hostname);
+    wifi_init(WIFI_SSID, WIFI_PASS, "espminer");
+   
+    //SYSTEM_init_peripherals(&GLOBAL_STATE);
+    //xTaskCreate(SYSTEM_task, "SYSTEM_task", 4096, (void *) &GLOBAL_STATE, 3, NULL);
+    //xTaskCreate(POWER_MANAGEMENT_task, "power mangement", 8192, (void *) &GLOBAL_STATE, 10, NULL);
 
-    SYSTEM_init_peripherals(&GLOBAL_STATE);
-
-    xTaskCreate(SYSTEM_task, "SYSTEM_task", 4096, (void *) &GLOBAL_STATE, 3, NULL);
-    xTaskCreate(POWER_MANAGEMENT_task, "power mangement", 8192, (void *) &GLOBAL_STATE, 10, NULL);
-
-    //start the API for AxeOS
-    start_rest_server((void *) &GLOBAL_STATE);
-    EventBits_t result_bits = wifi_connect();
-
-    if (result_bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to SSID: %s", wifi_ssid);
-        strncpy(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, "Connected!", 20);
-    } else if (result_bits & WIFI_FAIL_BIT) {
-        ESP_LOGE(TAG, "Failed to connect to SSID: %s", wifi_ssid);
-
-        strncpy(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, "Failed to connect", 20);
-        // User might be trying to configure with AP, just chill here
-        ESP_LOGI(TAG, "Finished, waiting for user input.");
-        while (1) {
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-    } else {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
-        strncpy(GLOBAL_STATE.SYSTEM_MODULE.wifi_status, "unexpected error", 20);
-        // User might be trying to configure with AP, just chill here
-        ESP_LOGI(TAG, "Finished, waiting for user input.");
-        while (1) {
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-    }
-
-    free(wifi_ssid);
-    free(wifi_pass);
-    free(hostname);
 
     // set the startup_done flag
+    
     GLOBAL_STATE.SYSTEM_MODULE.startup_done = true;
     GLOBAL_STATE.new_stratum_version_rolling_msg = false;
-
-    xTaskCreate(USER_INPUT_task, "user input", 8192, (void *) &GLOBAL_STATE, 5, NULL);
-
+    
+    
     if (GLOBAL_STATE.ASIC_functions.init_fn != NULL) {
-        wifi_softap_off();
 
         queue_init(&GLOBAL_STATE.stratum_queue);
+        ESP_LOGI(TAG, "Stratum queue initialized");
         queue_init(&GLOBAL_STATE.ASIC_jobs_queue);
 
-        SERIAL_init();
-        (*GLOBAL_STATE.ASIC_functions.init_fn)(GLOBAL_STATE.POWER_MANAGEMENT_MODULE.frequency_value, GLOBAL_STATE.asic_count);
+        
+        //(*GLOBAL_STATE.ASIC_functions.init_fn)(GLOBAL_STATE.POWER_MANAGEMENT_MODULE.frequency_value, GLOBAL_STATE.asic_count);
         SERIAL_set_baud((*GLOBAL_STATE.ASIC_functions.set_max_baud_fn)());
         SERIAL_clear_buffer();
 
@@ -134,8 +106,9 @@ void app_main(void)
         xTaskCreate(stratum_task, "stratum admin", 8192, (void *) &GLOBAL_STATE, 5, NULL);
         xTaskCreate(create_jobs_task, "stratum miner", 8192, (void *) &GLOBAL_STATE, 10, NULL);
         xTaskCreate(ASIC_task, "asic", 8192, (void *) &GLOBAL_STATE, 10, NULL);
-        xTaskCreate(ASIC_result_task, "asic result", 8192, (void *) &GLOBAL_STATE, 15, NULL);
+        //xTaskCreate(ASIC_result_task, "asic result", 8192, (void *) &GLOBAL_STATE, 15, NULL);
     }
+    
 }
 
 void MINER_set_wifi_status(wifi_status_t status, uint16_t retry_count)
