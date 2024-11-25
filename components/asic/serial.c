@@ -9,13 +9,12 @@
 #include "esp_log.h"
 #include "soc/uart_struct.h"
 
-#include "bm1397.h"
-#include "bm1368.h"
+#include "fayksic.h"
 #include "serial.h"
 #include "utils.h"
 
-#define ECHO_TEST_TXD (17)
-#define ECHO_TEST_RXD (18)
+#define ECHO_TEST_TXD (13)
+#define ECHO_TEST_RXD (12)
 #define BUF_SIZE (1024)
 
 static const char *TAG = "serial";
@@ -61,7 +60,8 @@ int SERIAL_send(uint8_t *data, int len, bool debug)
         prettyHex((unsigned char *)data, len);
         printf("\n");
     }
-
+    // log buffer
+    ESP_LOG_BUFFER_HEX(TAG, data, 100);
     return uart_write_bytes(UART_NUM_1, (const char *)data, len);
 }
 
