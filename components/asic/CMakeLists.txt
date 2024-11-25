@@ -5,6 +5,7 @@ SRCS
     "bm1366.c"
     "bm1397.c"
     "serial.c"
+    "fayksic.c"
     "crc.c"
     "common.c"
 
