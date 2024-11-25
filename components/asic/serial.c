@@ -52,16 +52,10 @@ void SERIAL_set_baud(int baud)
     uart_set_baudrate(UART_NUM_1, baud);
 }
 
+
+
 int SERIAL_send(uint8_t *data, int len, bool debug)
 {
-    if (debug)
-    {
-        printf("tx: ");
-        prettyHex((unsigned char *)data, len);
-        printf("\n");
-    }
-    // log buffer
-    ESP_LOG_BUFFER_HEX(TAG, data, 100);
     return uart_write_bytes(UART_NUM_1, (const char *)data, len);
 }
 

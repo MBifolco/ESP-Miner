@@ -8,6 +8,7 @@
 #include "bm1368.h"
 #include "bm1366.h"
 #include "bm1397.h"
+#include "fayksic.h"
 #include "common.h"
 #include "power_management_task.h"
 #include "serial.h"
@@ -94,7 +95,7 @@ typedef struct
     work_queue stratum_queue;
     work_queue ASIC_jobs_queue;
 
-    bm1397Module BM1397_MODULE;
+    fayksicModule FAYKSIC_MODULE;
     SystemModule SYSTEM_MODULE;
     AsicTaskModule ASIC_TASK_MODULE;
     PowerManagementModule POWER_MANAGEMENT_MODULE;

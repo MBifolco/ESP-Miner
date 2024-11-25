@@ -7,6 +7,7 @@
 #include "fayksic.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <unistd.h>
 
 static const char *TAG = "ASIC_task";
 
@@ -43,11 +44,10 @@ void ASIC_task(void *pvParameters)
         }
 
         FAYKSIC_send_work(GLOBAL_STATE, next_bm_job); // send the job to the ASIC
-        // log how many jobs are in queue
-        //ESP_LOGI(TAG, "Jobs in queue: %d", GLOBAL_STATE->ASIC_jobs_queue);
         // Time to execute the above code is ~0.3ms
         // Delay for ASIC(s) to finish the job
-        vTaskDelay((GLOBAL_STATE->asic_job_frequency_ms - 0.3) / portTICK_PERIOD_MS);
+        sleep(5);
+        //vTaskDelay((GLOBAL_STATE->asic_job_frequency_ms - 0.3) / portTICK_PERIOD_MS);
         xSemaphoreTake(GLOBAL_STATE->ASIC_TASK_MODULE.semaphore, (GLOBAL_STATE->asic_job_frequency_ms / portTICK_PERIOD_MS));
     }
 }

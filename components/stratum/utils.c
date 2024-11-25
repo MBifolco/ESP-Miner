@@ -303,3 +303,9 @@ uint32_t flip32(uint32_t val)
     ret |= (val & 0xFF000000) >> 24;
     return ret;
 }
+
+void to_hex_string(unsigned char *input, char output[], int len) {
+    for (int i = 0; i < len; i++) {
+        sprintf(output + (i * 2), "%02x", input[i]);
+    }
+}

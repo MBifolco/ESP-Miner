@@ -32,6 +32,8 @@ double le256todouble(const void *target);
 
 void prettyHex(unsigned char *buf, int len);
 
+void to_hex_string(unsigned char *input, char output[], int len);
+
 uint32_t flip32(uint32_t val);
 
 #define STRATUM_DEFAULT_VERSION_MASK 0x1fffe000
