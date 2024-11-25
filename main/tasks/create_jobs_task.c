@@ -7,6 +7,7 @@
 #include "string.h"
 
 #include <sys/time.h>
+#include "fayksic.h"
 
 static const char *TAG = "create_jobs_task";
 
@@ -75,6 +76,7 @@ void create_jobs_task(void *pvParameters)
 
 static void process_mining_job(GlobalState *GLOBAL_STATE, mining_notify *notification)
 {
+    
     char *extranonce_2_str = extranonce_2_generate(0, GLOBAL_STATE->extranonce_2_len);
     if (extranonce_2_str == NULL) {
         ESP_LOGE(TAG, "Failed to generate extranonce_2");
@@ -96,6 +98,7 @@ static void process_mining_job(GlobalState *GLOBAL_STATE, mining_notify *notific
         return;
     }
 
+
     bm_job next_job = construct_bm_job(notification, merkle_root, GLOBAL_STATE->version_mask);
 
     bm_job *queued_next_job = malloc(sizeof(bm_job));
@@ -113,7 +116,7 @@ static void process_mining_job(GlobalState *GLOBAL_STATE, mining_notify *notific
     queued_next_job->version_mask = GLOBAL_STATE->version_mask;
 
     queue_enqueue(&GLOBAL_STATE->ASIC_jobs_queue, queued_next_job);
-
+   
     free(coinbase_tx);
     free(merkle_root);
 
