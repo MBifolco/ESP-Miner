@@ -84,8 +84,14 @@ static void _send_FAYKSIC(uint8_t header, uint8_t * data, uint8_t data_len, bool
 
     // add the length field
     buf[3] = (packet_type == JOB_PACKET) ? (data_len + 4) : (data_len + 3);
-
+    
     // add the data
+    prettyHex((unsigned char *)data, data_len);
+    printf("\n");
+    char block_header[160];
+    to_hex_string(data, block_header, 80);
+    printf("Sending block header: %s\n", block_header);
+
     memcpy(buf + 4, data, data_len);
 
     // add the correct crc type
@@ -98,7 +104,6 @@ static void _send_FAYKSIC(uint8_t header, uint8_t * data, uint8_t data_len, bool
     }
 
     // send serial data
-    ESP_LOGI(TAG, "Sending FAYKSIC packet");
     // log first five bytes of the packet
     //ESP_LOG_BUFFER_HEX(TAG, buf, 100);
     SERIAL_send(buf, total_length, debug);

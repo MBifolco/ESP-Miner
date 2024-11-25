@@ -120,7 +120,6 @@ void STRATUM_V1_parse(StratumApiV1Message * message, const char * stratum_json)
         ESP_LOGE(TAG, "Error parsing JSON: %s", stratum_json);
         return;
     }
-    ESP_LOGI(TAG, "Parsing JSON: %s", stratum_json);
 
     cJSON * id_json = cJSON_GetObjectItem(json, "id");
     int64_t parsed_id = -1;
@@ -200,17 +199,12 @@ void STRATUM_V1_parse(StratumApiV1Message * message, const char * stratum_json)
             strcpy(message->extranonce_str, extranonce_json->valuestring);
             message->response_success = true;
 
-            //print the extranonce_str
-            ESP_LOGI(TAG, "extranonce_str: %s", message->extranonce_str);
-            ESP_LOGI(TAG, "extranonce_2_len: %d", message->extranonce_2_len);
-
         //if the id is STRATUM_ID_CONFIGURE parse it
         } else if (parsed_id == STRATUM_ID_CONFIGURE) {
             cJSON * mask = cJSON_GetObjectItem(result_json, "version-rolling.mask");
             if (mask != NULL) {
                 result = STRATUM_RESULT_VERSION_MASK;
                 message->version_mask = strtoul(mask->valuestring, NULL, 16);
-                ESP_LOGI(TAG, "Set version mask: %08lx", message->version_mask);
             } else {
                 ESP_LOGI(TAG, "error setting version mask: %s", stratum_json);
             }
