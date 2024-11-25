@@ -322,7 +322,7 @@ int BM1397_set_max_baud(void)
     unsigned char baudrate[9] = {0x00, MISC_CONTROL, 0x00, 0x00, 0b01100000, 0b00110001};
     ; // baudrate - misc_control
     _send_BM1397((TYPE_CMD | GROUP_ALL | CMD_WRITE), baudrate, 6, BM1937_SERIALTX_DEBUG);
-    return 3125000;
+    return 115200;
 }
 
 void BM1397_set_job_difficulty_mask(int difficulty)
