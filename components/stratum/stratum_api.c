@@ -116,6 +116,11 @@ char * STRATUM_V1_receive_jsonrpc_line(int sockfd)
 void STRATUM_V1_parse(StratumApiV1Message * message, const char * stratum_json)
 {
     cJSON * json = cJSON_Parse(stratum_json);
+    if (json == NULL) {
+        ESP_LOGE(TAG, "Error parsing JSON: %s", stratum_json);
+        return;
+    }
+    ESP_LOGI(TAG, "Parsing JSON: %s", stratum_json);
 
     cJSON * id_json = cJSON_GetObjectItem(json, "id");
     int64_t parsed_id = -1;
